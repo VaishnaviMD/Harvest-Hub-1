@@ -1,0 +1,194 @@
+/* ===== Base Styles ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Scope auth pages so global layout (header/footer) is unaffected */
+.auth-page {
+  background: linear-gradient(to bottom right, #ecfdf5, #f0fdf4);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+/* ===== Container ===== */
+.signin-container {
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+/* ===== Logo ===== */
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #16a34a;
+  margin-bottom: 2rem;
+}
+
+/* ===== Card ===== */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+.card-header h2 {
+  font-size: 1.8rem;
+  color: #111;
+  margin-bottom: 0.5rem;
+}
+.card-header p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ===== Form ===== */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.form-group {
+  text-align: left;
+}
+label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+input:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+.password-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ===== Buttons ===== */
+.btn-primary {
+  background: #16a34a;
+  color: white;
+  padding: 0.7rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  background: #15803d;
+}
+.btn-outline {
+  border: 2px solid #16a34a;
+  background: transparent;
+  color: #16a34a;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-outline:hover {
+  background: #16a34a;
+  color: #fff;
+}
+.w-full {
+  width: 100%;
+}
+
+/* ===== Links ===== */
+.link {
+  color: #16a34a;
+  text-decoration: none;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ===== Text ===== */
+.text-center {
+  text-align: center;
+}
+.small {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* ===== Divider ===== */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #d1d5db;
+  margin: 0 0.5rem;
+}
+
+/* ===== Social Login ===== */
+.social-login {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+}
+.social-login button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-weight: 500;
+  padding: 0.6rem 1rem;
+}
+.social-login img {
+  width: 18px;
+  height: 18px;
+}
+
+/* ===== User Type ===== */
+.user-type {
+  margin-top: 1.5rem;
+  color: #555;
+  font-size: 0.9rem;
+}
+.user-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+/* ===== Animations ===== */
+button,
+input {
+  transition: all 0.2s ease-in-out;
+}
