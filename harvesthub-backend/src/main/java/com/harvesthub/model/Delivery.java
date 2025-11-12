@@ -25,6 +25,22 @@ public class Delivery {
     
     @Column(name = "actual_del_time")
     private Date actualDelTime;
+    
+    // GPS Coordinates
+    @Column(name = "pickup_latitude")
+    private Double pickupLatitude;
+    
+    @Column(name = "pickup_longitude")
+    private Double pickupLongitude;
+    
+    @Column(name = "delivery_latitude")
+    private Double deliveryLatitude;
+    
+    @Column(name = "delivery_longitude")
+    private Double deliveryLongitude;
+    
+    @Column(name = "estimated_duration_minutes")
+    private Integer estimatedDurationMinutes;
 
     // One-to-One relationship with Orders
     @OneToOne(fetch = FetchType.LAZY)

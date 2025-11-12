@@ -27,6 +27,13 @@ public class Users {
     
     @Column(name = "register_date")
     private Date registerDate;
+    
+    // GPS Coordinates for location
+    @Column(name = "latitude")
+    private Double latitude;
+    
+    @Column(name = "longitude")
+    private Double longitude;
 
     // One-to-Many relationship with Products (farmer lists products)
     @OneToMany(mappedBy = "farmer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

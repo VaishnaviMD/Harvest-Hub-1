@@ -5,18 +5,22 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 import com.harvesthub.model.Payment;
 import com.harvesthub.repository.PaymentRepository;
+import com.harvesthub.service.PaymentGatewayService;
 
 @RestController
 @RequestMapping("/api/payments")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class PaymentController {
 
     private final PaymentRepository repo;
+    private final PaymentGatewayService paymentGatewayService;
 
-    public PaymentController(PaymentRepository repo) {
+    public PaymentController(PaymentRepository repo, PaymentGatewayService paymentGatewayService) {
         this.repo = repo;
+        this.paymentGatewayService = paymentGatewayService;
     }
 
     // GET all payments
@@ -46,6 +50,20 @@ public class PaymentController {
     public ResponseEntity<Payment> addPayment(@RequestBody Payment payment) {
         Payment savedPayment = repo.save(payment);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPayment);
+    }
+
+    // POST - Update payment status after gateway confirmation
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<Payment> confirmPayment(@PathVariable Long id, @RequestBody Map<String, String> paymentData) {
+        Optional<Payment> paymentOpt = repo.findById(id);
+        if (paymentOpt.isPresent()) {
+            Payment payment = paymentOpt.get();
+            payment.setPayStatus(paymentData.get("status"));
+            payment.setTransactionId(paymentData.get("transactionId"));
+            Payment updatedPayment = repo.save(payment);
+            return ResponseEntity.ok(updatedPayment);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     // PUT - Update payment

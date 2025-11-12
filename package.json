@@ -1,0 +1,12 @@
+{
+  "name": "harvesthub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "cd harvesthub-frontend && npm start",
+    "build": "cd harvesthub-frontend && npm run build",
+    "test": "cd harvesthub-frontend && npm test"
+  },
+  "description": "Harvest Hub - Farm to table marketplace"
+}
+
