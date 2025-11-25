@@ -212,6 +212,8 @@ CREATE TABLE `users` (
   `ph_no` varchar(255) DEFAULT NULL,
   `register_date` datetime(6) DEFAULT NULL,
   `type` varchar(255) DEFAULT NULL,
+  `latitude` double DEFAULT NULL,
+  `longitude` double DEFAULT NULL,
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

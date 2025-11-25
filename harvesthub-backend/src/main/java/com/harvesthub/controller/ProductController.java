@@ -2,11 +2,14 @@ package com.harvesthub.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import com.harvesthub.model.Products;
+import com.harvesthub.model.Users;
 import com.harvesthub.repository.ProductRepository;
+import com.harvesthub.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/products")
@@ -14,15 +17,30 @@ import com.harvesthub.repository.ProductRepository;
 public class ProductController {
 
     private final ProductRepository repo;
+    private final UserRepository userRepository;
 
-    public ProductController(ProductRepository repo) {
+    public ProductController(ProductRepository repo, UserRepository userRepository) {
         this.repo = repo;
+        this.userRepository = userRepository;
     }
 
     // GET all products
     @GetMapping
-    public List<Products> getAllProducts() {
-        return repo.findAll();
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Products>> getAllProducts() {
+        try {
+            List<Products> products = repo.findAll();
+            // Initialize farmer relationship to avoid lazy loading issues
+            products.forEach(p -> {
+                if (p.getFarmer() != null) {
+                    p.getFarmer().getUserId(); // Trigger lazy loading
+                }
+            });
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // GET product by ID
@@ -41,15 +59,43 @@ public class ProductController {
 
     // GET products by farmer ID
     @GetMapping("/farmer/{farmerId}")
-    public List<Products> getProductsByFarmer(@PathVariable Long farmerId) {
-        return repo.findByFarmerUserId(farmerId);
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Products>> getProductsByFarmer(@PathVariable Long farmerId) {
+        try {
+            List<Products> products = repo.findByFarmerUserId(farmerId);
+            // Initialize farmer relationship to avoid lazy loading issues
+            products.forEach(p -> {
+                if (p.getFarmer() != null) {
+                    p.getFarmer().getUserId(); // Trigger lazy loading
+                }
+            });
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // POST - Create new product
     @PostMapping
+    @Transactional
     public ResponseEntity<Products> addProduct(@RequestBody Products product) {
-        Products savedProduct = repo.save(product);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
+        try {
+            // If farmer is provided with userId, fetch the full User entity
+            if (product.getFarmer() != null && product.getFarmer().getUserId() != null) {
+                Optional<Users> farmerOpt = userRepository.findById(product.getFarmer().getUserId());
+                if (farmerOpt.isPresent()) {
+                    product.setFarmer(farmerOpt.get());
+                } else {
+                    return ResponseEntity.badRequest().body(null);
+                }
+            }
+            Products savedProduct = repo.save(product);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // PUT - Update product
@@ -65,7 +111,15 @@ public class ProductController {
             product.setQuantity(productDetails.getQuantity());
             product.setFreshness(productDetails.getFreshness());
             product.setDateOfHarvest(productDetails.getDateOfHarvest());
-            product.setFarmer(productDetails.getFarmer());
+            
+            // Handle farmer relationship update
+            if (productDetails.getFarmer() != null && productDetails.getFarmer().getUserId() != null) {
+                Optional<Users> farmerOpt = userRepository.findById(productDetails.getFarmer().getUserId());
+                if (farmerOpt.isPresent()) {
+                    product.setFarmer(farmerOpt.get());
+                }
+            }
+            
             Products updatedProduct = repo.save(product);
             return ResponseEntity.ok(updatedProduct);
         }

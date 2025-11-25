@@ -1,69 +1,38 @@
-const defaultBaseUrl = process.env.REACT_APP_API_BASE_URL || "";
-const USE_MOCK = true; // Set to false when backend is available
+import { httpClient } from "./httpClient";
 
-function getBaseUrl() {
-  return defaultBaseUrl;
-}
+const USE_MOCK = false; // Set to false when backend is available
 
-function getAuthToken() {
-  return localStorage.getItem("token");
-}
+const mockFarmerProducts = [
+  { productId: 101, id: 101, name: "Heirloom Tomatoes", category: "Vegetables", price: 120, quantity: 12, image: "/category-vegetables.jpg", freshness: 95 },
+  { productId: 102, id: 102, name: "Raw Honey", category: "Other", price: 350, quantity: 6, image: "/category-dairy.jpg", freshness: 100 },
+];
+let mockFarmerProductCounter = 200;
 
 async function request(path, options = {}) {
-  // Use mock if backend is not available
-  if (USE_MOCK) {
-    return mockRequest(path, options);
-  }
+  const { method = "GET", data, headers = {} } = options;
 
-  const token = getAuthToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  if (USE_MOCK) {
+    return mockRequest(path, { method, data });
   }
 
   try {
-    const res = await fetch(`${getBaseUrl()}${path}`, {
+    const response = await httpClient({
+      url: path,
+      method,
+      data,
       headers,
-      ...options,
     });
-    
-    const contentType = res.headers.get("content-type") || "";
-    let errorText = "";
-    
-    if (!res.ok) {
-      // Try to get error message from response
-      if (contentType.includes("application/json")) {
-        try {
-          const errorJson = await res.json();
-          errorText = errorJson.message || errorJson.error || (typeof errorJson === 'string' ? errorJson : JSON.stringify(errorJson));
-        } catch (e) {
-          errorText = await res.text().catch(() => "");
-        }
-      } else {
-        errorText = await res.text().catch(() => "");
-      }
-      throw new Error(errorText || `Request failed with status ${res.status}`);
-    }
-    
-    if (contentType.includes("application/json")) {
-      return res.json();
-    }
-    return res.text();
+    return response.data;
   } catch (error) {
-    // Fallback to mock on network error
-    if (error.message.includes("ECONNREFUSED") || error.message.includes("Failed to fetch")) {
-      return mockRequest(path, options);
+    const message = error?.message || "";
+    if (!error.status && (message.includes("Network Error") || message.includes("ECONNREFUSED"))) {
+      return mockRequest(path, { method, data });
     }
-    // If it's already an Error with message, rethrow it
-    if (error instanceof Error && error.message) {
+    if (error.status) {
       throw error;
     }
-    // Otherwise wrap it
-    throw new Error(error.message || "Network error occurred");
+    const generic = new Error(message || "Network error occurred");
+    throw generic;
   }
 }
 
@@ -78,13 +47,65 @@ async function mockRequest(path, options) {
 
   // Auth endpoints
   if (path === "/api/auth/signin" && options.method === "POST") {
-    const body = JSON.parse(options.body || "{}");
+    const body = options.data || {};
     return mockAuth.signIn(body.email, body.password);
   }
   
   if (path === "/api/auth/signup" && options.method === "POST") {
-    const body = JSON.parse(options.body || "{}");
+    const body = options.data || {};
     return mockAuth.signUp(body);
+  }
+
+  // Farmer product management
+  if (path.startsWith("/api/farmer/products")) {
+    const method = options.method || "GET";
+    const [, , , , productIdSegment] = path.split("/");
+
+    if (method === "GET") {
+      if (productIdSegment) {
+        const target = mockFarmerProducts.find((p) => String(p.productId) === productIdSegment);
+        if (!target) {
+          throw new Error("Product not found");
+        }
+        return target;
+      }
+      return mockFarmerProducts;
+    }
+
+    if (method === "POST") {
+      const body = options.data || {};
+      const newProduct = {
+        ...body,
+        productId: ++mockFarmerProductCounter,
+        id: mockFarmerProductCounter,
+        image: body.image || "/category-vegetables.jpg",
+      };
+      mockFarmerProducts.unshift(newProduct);
+      return newProduct;
+    }
+
+    if (method === "PUT" && productIdSegment) {
+      const body = options.data || {};
+      const idx = mockFarmerProducts.findIndex((p) => String(p.productId) === productIdSegment);
+      if (idx === -1) {
+        throw new Error("Product not found");
+      }
+      mockFarmerProducts[idx] = {
+        ...mockFarmerProducts[idx],
+        ...body,
+        productId: mockFarmerProducts[idx].productId,
+        id: mockFarmerProducts[idx].productId,
+      };
+      return mockFarmerProducts[idx];
+    }
+
+    if (method === "DELETE" && productIdSegment) {
+      const idx = mockFarmerProducts.findIndex((p) => String(p.productId) === productIdSegment);
+      if (idx !== -1) {
+        mockFarmerProducts.splice(idx, 1);
+      }
+      return { success: true };
+    }
   }
 
   // Products - return mock products
@@ -101,7 +122,7 @@ async function mockRequest(path, options) {
 
   // Orders - mock success
   if (path === "/api/orders" && options.method === "POST") {
-    const body = JSON.parse(options.body || "{}");
+    const body = options.data || {};
     return {
       orderId: Date.now(),
       totalAmount: body.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0,
@@ -111,7 +132,7 @@ async function mockRequest(path, options) {
 
   // Payment gateway
   if (path.includes("/payments/gateway/create-order") && options.method === "POST") {
-    const body = JSON.parse(options.body || "{}");
+    const body = options.data || {};
     return mockPayment.createOrder(body.amount, body.currency);
   }
 
@@ -134,6 +155,15 @@ async function mockRequest(path, options) {
   return { success: true, message: "Mock response" };
 }
 
+const mapProduct = (product) =>
+  product
+    ? {
+        ...product,
+        id: product.productId || product.id,
+        productId: product.productId || product.id,
+      }
+    : product;
+
 export const api = {
   // Products
   getProducts: async () => {
@@ -150,32 +180,30 @@ export const api = {
   // Auth
   signIn: async (payload) => {
     try {
-      return await request("/api/auth/signin", { method: "POST", body: JSON.stringify(payload) });
+      return await request("/api/auth/signin", { method: "POST", data: payload });
     } catch (err) {
-      // Fallback to mock
       const { mockAuth } = await import("./mockAuth");
       return mockAuth.signIn(payload.email, payload.password);
     }
   },
   signUp: async (payload) => {
     try {
-      return await request("/api/auth/signup", { method: "POST", body: JSON.stringify(payload) });
+      return await request("/api/auth/signup", { method: "POST", data: payload });
     } catch (err) {
-      // Fallback to mock
       const { mockAuth } = await import("./mockAuth");
       return mockAuth.signUp(payload);
     }
   },
 
   // Orders
-  createOrder: (payload) => request("/api/orders", { method: "POST", body: JSON.stringify(payload) }),
+  createOrder: (payload) => request("/api/orders", { method: "POST", data: payload }),
 
   // Payments
-  createPayment: (payload) => request("/api/payments", { method: "POST", body: JSON.stringify(payload) }),
+  createPayment: (payload) => request("/api/payments", { method: "POST", data: payload }),
 
   // Payment Gateway
-  createPaymentOrder: (payload) => request("/api/payments/gateway/create-order", { method: "POST", body: JSON.stringify(payload) }),
-  verifyPayment: (payload) => request("/api/payments/gateway/verify", { method: "POST", body: JSON.stringify(payload) }),
+  createPaymentOrder: (payload) => request("/api/payments/gateway/create-order", { method: "POST", data: payload }),
+  verifyPayment: (payload) => request("/api/payments/gateway/verify", { method: "POST", data: payload }),
 
   // Google Maps
   getCoordinates: (address) => request(`/api/maps/geocode?address=${encodeURIComponent(address)}`),
@@ -183,6 +211,21 @@ export const api = {
     request(`/api/maps/distance?originLat=${originLat}&originLng=${originLng}&destLat=${destLat}&destLng=${destLng}`),
   getRoute: (originLat, originLng, destLat, destLng) => 
     request(`/api/maps/route?originLat=${originLat}&originLng=${originLng}&destLat=${destLat}&destLng=${destLng}`),
+
+  // Product Management (for farmers)
+  createProduct: async (payload) => {
+    const product = await request("/api/farmer/products", { method: "POST", data: payload });
+    return mapProduct(product);
+  },
+  updateProduct: async (id, payload) => {
+    const product = await request(`/api/farmer/products/${id}`, { method: "PUT", data: payload });
+    return mapProduct(product);
+  },
+  deleteProduct: (id) => request(`/api/farmer/products/${id}`, { method: "DELETE" }),
+  getFarmerProducts: async () => {
+    const products = await request(`/api/farmer/products`);
+    return Array.isArray(products) ? products.map(mapProduct) : [];
+  },
 };
 
 

@@ -44,25 +44,31 @@ export default function SignUp() {
         setError(response?.message || "Signup failed");
       }
     } catch (err) {
-      // Fallback to mock auth if API fails
-      try {
-        const { mockAuth } = await import("../services/mockAuth");
-        const response = await mockAuth.signUp({
-          email,
-          password,
-          name,
-          type,
-          phNo,
-          location,
-        });
-        if (response.success) {
-          login(response.user, response.token);
-          navigate("/");
-        } else {
-          setError(response.message || "Signup failed");
+      // Check if it's a network error (backend not available) or a backend error
+      if (err.message && (err.message.includes("ECONNREFUSED") || err.message.includes("Failed to fetch"))) {
+        // Backend not available, fallback to mock
+        try {
+          const { mockAuth } = await import("../services/mockAuth");
+          const response = await mockAuth.signUp({
+            email,
+            password,
+            name,
+            type,
+            phNo,
+            location,
+          });
+          if (response.success) {
+            login(response.user, response.token);
+            navigate("/");
+          } else {
+            setError(response.message || "Signup failed");
+          }
+        } catch (mockErr) {
+          setError("Failed to sign up. Please try again.");
         }
-      } catch (mockErr) {
-        setError("Failed to sign up. Please try again.");
+      } else {
+        // Backend error - show the actual error message
+        setError(err.message || "Failed to sign up. Please try again.");
       }
     } finally {
       setLoading(false);
