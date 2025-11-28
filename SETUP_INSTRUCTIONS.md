@@ -106,3 +106,4 @@ Your frontend should have these folders:
 
 All files are present and ready to use!
 
+

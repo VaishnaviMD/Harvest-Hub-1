@@ -6,6 +6,7 @@ import com.harvesthub.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Map;
 
@@ -36,8 +37,13 @@ public class AuthController {
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<Map<String, Object>> signIn(@RequestBody SignInRequest request) {
-        Map<String, Object> result = authService.signIn(request.getEmail(), request.getPassword());
+    public ResponseEntity<Map<String, Object>> signIn(@RequestBody SignInRequest request, HttpServletRequest httpRequest) {
+        String ip = httpRequest.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) {
+            ip = httpRequest.getRemoteAddr();
+        }
+        String userAgent = httpRequest.getHeader("User-Agent");
+        Map<String, Object> result = authService.signIn(request.getEmail(), request.getPassword(), ip, userAgent);
 
         if ((Boolean) result.get("success")) {
             return ResponseEntity.ok(result);

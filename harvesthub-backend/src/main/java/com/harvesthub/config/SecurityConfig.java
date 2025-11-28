@@ -39,11 +39,14 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/products/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/products/**").authenticated()
                 .requestMatchers("/api/farmer/products/**").authenticated()
                 .requestMatchers("/api/maps/**").permitAll()
                 .requestMatchers("/api/orders/**").authenticated()
-                .requestMatchers("/api/payments/**").authenticated()
+                // Payments removed; no endpoints under /api/payments/**
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

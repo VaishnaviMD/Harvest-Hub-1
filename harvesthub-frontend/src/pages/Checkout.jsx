@@ -6,14 +6,13 @@ import BackButton from "../components/BackButton";
 import LocationPicker from "../components/LocationPicker";
 import { formatINR } from "../utils/currency";
 import { api } from "../services/api";
-import { mockPayment } from "../services/mockPayment";
 
 export default function Checkout() {
   const { items, totals, clear } = useCart();
   const { user } = useAuth();
   const [address, setAddress] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [payment, setPayment] = useState("card");
+  const [payment, setPayment] = useState("cod");
   const [loading, setLoading] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const navigate = useNavigate();
@@ -23,113 +22,12 @@ export default function Checkout() {
     setShowLocationPicker(false);
   };
 
-  const handleRazorpayPayment = async (orderData) => {
-    try {
-      // Create payment order (mock or real)
-      const paymentOrder = await api.createPaymentOrder({
-        amount: totals.total,
-        currency: "INR",
-        receipt: `ORDER_${Date.now()}`,
-      });
+  const handleRazorpayPayment = async () => {};
 
-      if (!paymentOrder || !paymentOrder.orderId) {
-        throw new Error("Failed to create payment order");
-      }
-
-      // Use mock payment if Razorpay is not available
-      if (!window.Razorpay || paymentOrder.keyId === "mock_key_id") {
-        const confirmed = window.confirm(
-          `Proceed with payment of ${formatINR(totals.total)}?\n\nThis is a mock payment. In production, this would redirect to Razorpay.`
-        );
-        
-        if (confirmed) {
-          const paymentResult = await mockPayment.processPayment(
-            paymentOrder.orderId,
-            totals.total,
-            "card"
-          );
-          
-          if (paymentResult.success) {
-            await createOrder(orderData, {
-              paymentId: paymentResult.paymentId,
-              orderId: paymentOrder.orderId,
-              transactionId: paymentResult.transactionId,
-              status: "SUCCESS",
-            });
-          } else {
-            alert("Payment failed. Please try again.");
-          }
-        }
-        return;
-      }
-
-      // Real Razorpay integration (when available)
-      const options = {
-        key: paymentOrder.keyId,
-        amount: paymentOrder.amount * 100,
-        currency: paymentOrder.currency,
-        name: "Harvest Hub",
-        description: "Order Payment",
-        order_id: paymentOrder.orderId,
-        handler: async function (response) {
-          try {
-            const verified = await api.verifyPayment({
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-            });
-
-            if (verified.verified) {
-              await createOrder(orderData, {
-                paymentId: response.razorpay_payment_id,
-                orderId: response.razorpay_order_id,
-                signature: response.razorpay_signature,
-                status: "SUCCESS",
-              });
-            } else {
-              alert("Payment verification failed. Please try again.");
-            }
-          } catch (err) {
-            console.error("Payment verification error:", err);
-            alert("Payment verification failed. Please contact support.");
-          }
-        },
-        prefill: {
-          name: user?.name || "",
-          email: user?.email || "",
-        },
-        theme: {
-          color: "#4caf50",
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.on("payment.failed", function (response) {
-        alert("Payment failed. Please try again.");
-      });
-      razorpay.open();
-    } catch (err) {
-      console.error("Payment error:", err);
-      alert("Failed to initialize payment. Please try again.");
-    }
-  };
-
-  const createOrder = async (orderData, paymentData = null) => {
+  const createOrder = async (orderData) => {
     try {
       const response = await api.createOrder(orderData);
-      
-      if (paymentData) {
-        // Update payment status
-        await api.createPayment({
-          orderId: response.orderId,
-          amount: totals.total,
-          paymentMethod: payment,
-          transactionId: paymentData.paymentId || paymentData.orderId,
-          status: paymentData.status,
-        });
-      }
-
-      alert(`Order placed successfully! Thank you, ${user?.name || user?.email}. Your payment has been processed.`);
+      alert(`Order placed successfully! Thank you, ${user?.name || user?.email}.`);
       clear();
       navigate("/");
     } catch (err) {
@@ -160,16 +58,7 @@ export default function Checkout() {
         })),
       };
 
-      if (payment === "card") {
-        // Use Razorpay for card payments
-        await handleRazorpayPayment(orderData);
-      } else {
-        // COD - create order directly
-        await createOrder(orderData, {
-          status: "PENDING",
-          paymentMethod: "cod",
-        });
-      }
+      await createOrder(orderData);
     } catch (err) {
       console.error("Order error:", err);
       alert(`Failed to place order: ${err.message || "Unknown error"}. Please try again.`);
@@ -220,12 +109,11 @@ export default function Checkout() {
             <div className="form-group" style={{ marginTop: "1rem" }}>
               <label>Payment Method</label>
               <select value={payment} onChange={(e) => setPayment(e.target.value)}>
-                <option value="card">Credit/Debit Card (Razorpay)</option>
                 <option value="cod">Cash on Delivery</option>
               </select>
             </div>
             <button type="submit" className="btn-primary" style={{ marginTop: "1rem" }} disabled={loading}>
-              {loading ? "Processing..." : payment === "card" ? "Pay Now" : "Place Order"}
+              {loading ? "Processing..." : "Place Order"}
             </button>
           </form>
           <div className="card">

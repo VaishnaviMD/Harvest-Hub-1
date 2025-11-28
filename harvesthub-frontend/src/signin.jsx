@@ -33,25 +33,7 @@ export default function SignIn() {
         setError(response?.message || "Login failed");
       }
     } catch (err) {
-      // Check if it's a network error (backend not available) or a backend error
-      if (err.message && (err.message.includes("ECONNREFUSED") || err.message.includes("Failed to fetch"))) {
-        // Backend not available, fallback to mock
-        try {
-          const { mockAuth } = await import("../services/mockAuth");
-          const response = await mockAuth.signIn(email, password);
-          if (response.success) {
-            login(response.user, response.token);
-            navigate("/");
-          } else {
-            setError(response.message || "Login failed");
-          }
-        } catch (mockErr) {
-          setError("Failed to sign in. Please try again.");
-        }
-      } else {
-        // Backend error - show the actual error message
-        setError(err.message || "Failed to sign in. Please try again.");
-      }
+      setError(err.message || "Failed to sign in. Please try again.");
     } finally {
       setLoading(false);
     }

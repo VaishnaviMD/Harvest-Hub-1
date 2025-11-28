@@ -1,7 +1,9 @@
 package com.harvesthub.service;
 
 import com.harvesthub.model.Users;
+import com.harvesthub.model.LoginHistory;
 import com.harvesthub.repository.UserRepository;
+import com.harvesthub.repository.LoginHistoryRepository;
 import com.harvesthub.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +25,9 @@ public class AuthService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private LoginHistoryRepository loginHistoryRepository;
 
     public Map<String, Object> signUp(String email, String password, String name, String type, String phNo, String location) {
         Map<String, Object> response = new HashMap<>();
@@ -62,11 +67,20 @@ public class AuthService {
         return response;
     }
 
-    public Map<String, Object> signIn(String email, String password) {
+    public Map<String, Object> signIn(String email, String password, String ipAddress, String userAgent) {
         Map<String, Object> response = new HashMap<>();
 
         Optional<Users> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
+            LoginHistory history = new LoginHistory();
+            history.setEmail(email);
+            history.setLoginDate(new Date());
+            history.setIpAddress(ipAddress);
+            history.setUserAgent(userAgent);
+            history.setLoginStatus("FAILED");
+            history.setFailureReason("USER_NOT_FOUND");
+            loginHistoryRepository.save(history);
+
             response.put("success", false);
             response.put("message", "Invalid email or password");
             return response;
@@ -74,6 +88,16 @@ public class AuthService {
 
         Users user = userOpt.get();
         if (!passwordEncoder.matches(password, user.getPassword())) {
+            LoginHistory history = new LoginHistory();
+            history.setUser(user);
+            history.setEmail(email);
+            history.setLoginDate(new Date());
+            history.setIpAddress(ipAddress);
+            history.setUserAgent(userAgent);
+            history.setLoginStatus("FAILED");
+            history.setFailureReason("INVALID_PASSWORD");
+            loginHistoryRepository.save(history);
+
             response.put("success", false);
             response.put("message", "Invalid email or password");
             return response;
@@ -81,6 +105,15 @@ public class AuthService {
 
         // Generate JWT token
         String token = jwtUtil.generateToken(user.getEmail(), user.getType(), user.getUserId());
+
+        LoginHistory history = new LoginHistory();
+        history.setUser(user);
+        history.setEmail(email);
+        history.setLoginDate(new Date());
+        history.setIpAddress(ipAddress);
+        history.setUserAgent(userAgent);
+        history.setLoginStatus("SUCCESS");
+        loginHistoryRepository.save(history);
 
         response.put("success", true);
         response.put("message", "Login successful");

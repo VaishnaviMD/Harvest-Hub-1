@@ -52,41 +52,62 @@ public class FarmerProductController {
     @PostMapping
     public ResponseEntity<Products> createProduct(@RequestHeader("Authorization") String authHeader,
                                                   @RequestBody Products productRequest) {
-        Users farmer = resolveAuthenticatedFarmer(authHeader);
-        Products product = prepareProductForSave(productRequest, farmer);
-        Products saved = productRepository.save(product);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        try {
+            Users farmer = resolveAuthenticatedFarmer(authHeader);
+            Products product = prepareProductForSave(productRequest, farmer);
+            Products saved = productRepository.save(product);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to create product: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{productId}")
     public ResponseEntity<Products> updateProduct(@RequestHeader("Authorization") String authHeader,
                                                   @PathVariable Long productId,
                                                   @RequestBody Products productRequest) {
-        Users farmer = resolveAuthenticatedFarmer(authHeader);
-        Products existing = productRepository.findByProductIdAndFarmerUserId(productId, farmer.getUserId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        try {
+            Users farmer = resolveAuthenticatedFarmer(authHeader);
+            Products existing = productRepository.findByProductIdAndFarmerUserId(productId, farmer.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        existing.setName(productRequest.getName());
-        existing.setCategory(productRequest.getCategory());
-        existing.setPrice(productRequest.getPrice());
-        existing.setQuantity(productRequest.getQuantity());
-        existing.setImage(productRequest.getImage());
-        existing.setFreshness(productRequest.getFreshness());
-        existing.setDateOfHarvest(productRequest.getDateOfHarvest());
+            existing.setName(productRequest.getName());
+            existing.setCategory(productRequest.getCategory());
+            existing.setPrice(productRequest.getPrice());
+            existing.setQuantity(productRequest.getQuantity());
+            existing.setImage(productRequest.getImage());
+            existing.setFreshness(productRequest.getFreshness());
+            existing.setDateOfHarvest(productRequest.getDateOfHarvest());
 
-        Products updated = productRepository.save(existing);
-        return ResponseEntity.ok(updated);
+            Products updated = productRepository.save(existing);
+            return ResponseEntity.ok(updated);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to update product: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{productId}")
     public ResponseEntity<Void> deleteProduct(@RequestHeader("Authorization") String authHeader,
                                               @PathVariable Long productId) {
-        Users farmer = resolveAuthenticatedFarmer(authHeader);
-        Products existing = productRepository.findByProductIdAndFarmerUserId(productId, farmer.getUserId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        try {
+            Users farmer = resolveAuthenticatedFarmer(authHeader);
+            Products existing = productRepository.findByProductIdAndFarmerUserId(productId, farmer.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        productRepository.delete(existing);
-        return ResponseEntity.noContent().build();
+            productRepository.delete(existing);
+            return ResponseEntity.noContent().build();
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to delete product: " + e.getMessage());
+        }
     }
 
     private Users resolveAuthenticatedFarmer(String authHeader) {
